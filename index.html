@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Giá BDS Kim Long, Huế</title>
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <style>
+    body { margin: 0; padding: 0; display: flex; font-family: sans-serif; height: 100vh; }
+    .sidebar { width: 300px; padding: 20px; background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1; }
+    #map { flex: 1; }
+    .info-panel { position: absolute; top: 20px; right: 20px; width: 300px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); display: none; max-height: 80vh; overflow-y: auto; }
+    .info-panel.active { display: block; }
+    .info-row { margin-bottom: 8px; font-size: 14px; border-bottom: 1px dashed #ccc; padding-bottom: 4px; }
+    .close-btn { float: right; cursor: pointer; color: red; font-weight: bold; border: none; background: none; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Lớp Dữ Liệu</h2>
+    <label><input type="checkbox" id="toggle-diem" checked> Điểm khảo sát</label><br><br>
+    <label><input type="checkbox" id="toggle-quyhoach" checked> Điểm quy hoạch</label><br><br>
+    <label><input type="checkbox" id="toggle-matnuoc" checked> Mặt nước</label>
+  </div>
+  
+  <div id="map"></div>
+  
+  <div class="info-panel" id="infoPanel">
+    <button class="close-btn" onclick="document.getElementById('infoPanel').classList.remove('active')">X</button>
+    <h3 style="margin-top: 0;">Thông tin chi tiết</h3>
+    <div id="infoContent"></div>
+  </div>
+
+  <script>
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+      center: [107.57, 16.47],
+      zoom: 14
+    });
+
+    map.on('load', () => {
+      // Dùng Date.now() chuẩn cú pháp để chống cache
+      map.addSource('nguon-diem', { type: 'geojson', data: 'diem_khaosat.geojson?t=' + Date.now() });
+      map.addSource('nguon-quyhoach', { type: 'geojson', data: 'quy_hoach.geojson?t=' + Date.now() });
+      map.addSource('nguon-matnuoc', { type: 'geojson', data: 'mat_nuoc.geojson?t=' + Date.now() });
+
+      map.addLayer({ id: 'lop-matnuoc', type: 'fill', source: 'nguon-matnuoc', paint: { 'fill-color': '#a3c2ff', 'fill-opacity': 0.7 } });
+      map.addLayer({ id: 'lop-quyhoach', type: 'circle', source: 'nguon-quyhoach', paint: { 'circle-color': '#ff9900', 'circle-radius': 6 } });
+      map.addLayer({ id: 'lop-diem', type: 'circle', source: 'nguon-diem', paint: { 'circle-color': '#ff0000', 'circle-radius': 7 } });
+
+      document.getElementById('toggle-diem').addEventListener('change', e => map.setLayoutProperty('lop-diem', 'visibility', e.target.checked ? 'visible' : 'none'));
+      document.getElementById('toggle-quyhoach').addEventListener('change', e => map.setLayoutProperty('lop-quyhoach', 'visibility', e.target.checked ? 'visible' : 'none'));
+      document.getElementById('toggle-matnuoc').addEventListener('change', e => map.setLayoutProperty('lop-matnuoc', 'visibility', e.target.checked ? 'visible' : 'none'));
+
+      map.on('click', ['lop-diem', 'lop-quyhoach', 'lop-matnuoc'], (e) => {
+        let html = '';
+        for (const [key, value] of Object.entries(e.features[0].properties)) {
+          html += `<div class="info-row"><strong>${key}:</strong> ${value || 'Trống'}</div>`;
+        }
+        document.getElementById('infoContent').innerHTML = html;
+        document.getElementById('infoPanel').classList.add('active');
+      });
+      
+      map.on('mouseenter', 'lop-diem', () => map.getCanvas().style.cursor = 'pointer');
+      map.on('mouseleave', 'lop-diem', () => map.getCanvas().style.cursor = '');
+    });
+  </script>
+</body>
+</html>
